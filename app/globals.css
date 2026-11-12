@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+/*
+ * Tokens de design — Estúdio Zênite (ver "Diretrizes de Design e UX" no CLAUDE.md).
+ * Tamanhos e contrastes abaixo são PISO, não teto.
+ * Tema claro único e de alto contraste (sem modo escuro automático, para a
+ * tela sempre ter a mesma aparência para a usuária).
+ */
+@theme {
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+
+  /* Cores */
+  --color-fundo: #f7f7f5;
+  --color-superficie: #ffffff;
+  --color-texto: #1a1a1a;
+  --color-texto-suave: #3d3d3d; /* ainda AA sobre branco */
+  --color-borda: #6b6b6b;
+  --color-primaria: #1d4ed8; /* ação principal (azul forte) */
+  --color-primaria-escura: #1e3a8a;
+  --color-sucesso: #1b8a5a;
+  --color-sucesso-fundo: #e6f4ed;
+  --color-erro: #c0392b;
+  --color-erro-fundo: #fbeae8;
+
+  /* Escala de fontes (corpo nunca < 16px) */
+  --text-corpo: 1.125rem; /* 18px */
+  --text-corpo--line-height: 1.6;
+  --text-botao: 1.125rem; /* 18px */
+  --text-botao--line-height: 1.4;
+  --text-titulo: 1.625rem; /* 26px */
+  --text-titulo--line-height: 1.3;
+
+  /* Tamanhos mínimos */
+  --spacing-toque: 3rem; /* 48px — altura mínima de botões e campos */
+}
+
+html {
+  font-size: 100%; /* respeita o zoom/tamanho de fonte do navegador */
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  font-size: var(--text-corpo);
+  line-height: var(--text-corpo--line-height);
+}
+
+/* Foco sempre bem visível para quem navega pelo teclado */
+:focus-visible {
+  outline: 3px solid var(--color-primaria);
+  outline-offset: 3px;
+}

@@ -1,0 +1,166 @@
+// Schema do Sistema de Gestão — Estúdio Zênite Fotografia (Fase 1)
+//
+// Escopo: Clientes, Eventos, Produtos, Contratos, Cobranças e Usuários (login).
+// Nada de automação, agenda, assinatura digital, PDV, RH ou financeiro avançado.
+//
+// Valores em dinheiro são guardados em CENTAVOS (Int) para evitar erros de
+// arredondamento. Ex.: R$ 1.250,00 => 125000. A formatação em R$ é feita na tela.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum TipoEvento {
+  Formatura
+  Casamento
+  QuinzeAnos
+}
+
+enum StatusCobranca {
+  Pendente
+  Pago
+}
+
+enum FormaPagamento {
+  Pix
+}
+
+// ---------------------------------------------------------------------------
+// Autenticação
+// ---------------------------------------------------------------------------
+
+model Usuario {
+  id           Int      @id @default(autoincrement())
+  nome         String
+  email        String   @unique
+  senhaHash    String
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Módulo 1 — Cadastro de Clientes e Produtos
+// ---------------------------------------------------------------------------
+
+model Cliente {
+  id           Int      @id @default(autoincrement())
+  nome         String
+  telefone     String
+  email        String?
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  eventos   Evento[]
+  contratos Contrato[]
+
+  @@index([nome])
+}
+
+model Evento {
+  id           Int        @id @default(autoincrement())
+  tipo         TipoEvento
+  data         DateTime
+  local        String?
+  criadoEm     DateTime   @default(now())
+  atualizadoEm DateTime   @updatedAt
+
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  contratos Contrato[]
+
+  @@index([clienteId])
+  @@index([data])
+}
+
+// Catálogo de produtos/pacotes, separados por tipo de evento.
+model Produto {
+  id            Int        @id @default(autoincrement())
+  nome          String
+  descricao     String?
+  precoCentavos Int
+  tipoEvento    TipoEvento
+  // Produto inativo some do catálogo mas continua nos contratos antigos.
+  ativo         Boolean    @default(true)
+  criadoEm      DateTime   @default(now())
+  atualizadoEm  DateTime   @updatedAt
+
+  itensContrato ContratoItem[]
+
+  @@index([tipoEvento, ativo])
+}
+
+// ---------------------------------------------------------------------------
+// Módulo 2 — Vendas e Contratos
+// ---------------------------------------------------------------------------
+
+model Contrato {
+  id                 Int      @id @default(autoincrement())
+  // Gerado automaticamente no fechamento. Formato: ZEN-AAAA-NNNNN
+  protocolo          String   @unique
+  valorTotalCentavos Int
+  fechadoEm          DateTime @default(now())
+  criadoEm           DateTime @default(now())
+  atualizadoEm       DateTime @updatedAt
+
+  clienteId Int
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  eventoId Int
+  evento   Evento @relation(fields: [eventoId], references: [id], onDelete: Restrict)
+
+  itens     ContratoItem[]
+  cobrancas Cobranca[]
+
+  @@index([clienteId])
+  @@index([eventoId])
+}
+
+// Produtos/pacotes contratados (N:N Contrato x Produto).
+// O valor unitário é copiado do catálogo no momento da venda, para que uma
+// mudança de preço futura não altere contratos já fechados.
+model ContratoItem {
+  id                    Int @id @default(autoincrement())
+  quantidade            Int @default(1)
+  valorUnitarioCentavos Int
+
+  contratoId Int
+  contrato   Contrato @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+
+  produtoId Int
+  produto   Produto @relation(fields: [produtoId], references: [id], onDelete: Restrict)
+
+  @@unique([contratoId, produtoId])
+}
+
+// ---------------------------------------------------------------------------
+// Módulo 3 — Financeiro Básico
+// ---------------------------------------------------------------------------
+
+// Nome do cliente, telefone e protocolo vêm do Contrato (cobranca.contrato.*),
+// sem duplicar dados.
+model Cobranca {
+  id             Int            @id @default(autoincrement())
+  valorCentavos  Int
+  formaPagamento FormaPagamento @default(Pix)
+  status         StatusCobranca @default(Pendente)
+  pagoEm         DateTime?
+  criadoEm       DateTime       @default(now())
+  atualizadoEm   DateTime       @updatedAt
+
+  contratoId Int
+  contrato   Contrato @relation(fields: [contratoId], references: [id], onDelete: Restrict)
+
+  @@index([contratoId])
+  @@index([status])
+  @@index([pagoEm])
+}
